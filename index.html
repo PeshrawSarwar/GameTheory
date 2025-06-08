@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prisoner's Dilemma Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Prisoner's Dilemma Game</h1>
+
+  <!-- Final Score & Winner Display -->
+  <div id="finalScore" class="final-score" hidden>
+    Final Score: Player A: <span id="finalScoreA">0</span> | Player B: <span id="finalScoreB">0</span>
+    <div id="winnerText"></div>
+  </div>
+
+  <!-- Selected algorithms & their types -->
+  <div class="selected-strategies">
+    <div>
+      <strong>Player A Strategy:</strong> <span id="selectedA"></span> — <span id="typeA" class="strategy-type"></span>
+    </div>
+    <div>
+      <strong>Player B Strategy:</strong> <span id="selectedB"></span> — <span id="typeB" class="strategy-type"></span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label for="strategyA">Player A Strategy:</label>
+    <select id="strategyA" class="material-select">
+      <option value="random">Random</option>
+      <option value="alwaysCooperate">Always Cooperate</option>
+      <option value="alwaysDefect">Always Defect</option>
+      <option value="titForTat">Tit for Tat</option>
+      <option value="grudger">Grudger</option>
+      <option value="forgivingTitForTat">Forgiving Tit for Tat</option>
+      <option value="pavlov">Pavlov</option>
+      <option value="friedman">Friedman</option>
+      <option value="feld">Feld</option>
+      <option value="randomNoise">Random Noise</option>
+      <option value="titForTwoTats">Tit for Two Tats</option>
+      <option value="hardMajority">Hard Majority</option>
+      <option value="softMajority">Soft Majority</option>
+      <option value="detective">Detective</option>
+      <option value="prober">Prober</option>
+    </select>
+
+    <label for="strategyB">Player B Strategy:</label>
+    <select id="strategyB" class="material-select">
+      <option value="random">Random</option>
+      <option value="alwaysCooperate">Always Cooperate</option>
+      <option value="alwaysDefect">Always Defect</option>
+      <option value="titForTat">Tit for Tat</option>
+      <option value="grudger">Grudger</option>
+      <option value="forgivingTitForTat">Forgiving Tit for Tat</option>
+      <option value="pavlov">Pavlov</option>
+      <option value="friedman">Friedman</option>
+      <option value="feld">Feld</option>
+      <option value="randomNoise">Random Noise</option>
+      <option value="titForTwoTats">Tit for Two Tats</option>
+      <option value="hardMajority">Hard Majority</option>
+      <option value="softMajority">Soft Majority</option>
+      <option value="detective">Detective</option>
+      <option value="prober">Prober</option>
+    </select>
+
+    <button onclick="startSimulation()">Start Simulation</button>
+  </div>
+
+  <div class="result">
+    <h3>Round <span id="round">1</span>/200</h3>
+    <div id="roundDetails"></div>
+    <div class="scoreboard">
+      <p>Player A Score: <span id="scoreA">0</span></p>
+      <p>Player B Score: <span id="scoreB">0</span></p>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
