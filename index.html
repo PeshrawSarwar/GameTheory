@@ -9,60 +9,19 @@
 <body>
   <h1>Prisoner's Dilemma Game</h1>
 
-  <!-- Final Score & Winner Display -->
-  <div id="finalScore" class="final-score" hidden>
-    Final Score: Player A: <span id="finalScoreA">0</span> | Player B: <span id="finalScoreB">0</span>
-    <div id="winnerText"></div>
-  </div>
-
-  <!-- Selected algorithms & their types -->
-  <div class="selected-strategies">
-    <div>
-      <strong>Player A Strategy:</strong> <span id="selectedA"></span> — <span id="typeA" class="strategy-type"></span>
-    </div>
-    <div>
-      <strong>Player B Strategy:</strong> <span id="selectedB"></span> — <span id="typeB" class="strategy-type"></span>
-    </div>
+  <div id="finalSummary" class="final-summary" style="display: none;">
+    <h2>Final Result</h2>
+    <p id="finalText"></p>
   </div>
 
   <div class="controls">
     <label for="strategyA">Player A Strategy:</label>
-    <select id="strategyA" class="material-select">
-      <option value="random">Random</option>
-      <option value="alwaysCooperate">Always Cooperate</option>
-      <option value="alwaysDefect">Always Defect</option>
-      <option value="titForTat">Tit for Tat</option>
-      <option value="grudger">Grudger</option>
-      <option value="forgivingTitForTat">Forgiving Tit for Tat</option>
-      <option value="pavlov">Pavlov</option>
-      <option value="friedman">Friedman</option>
-      <option value="feld">Feld</option>
-      <option value="randomNoise">Random Noise</option>
-      <option value="titForTwoTats">Tit for Two Tats</option>
-      <option value="hardMajority">Hard Majority</option>
-      <option value="softMajority">Soft Majority</option>
-      <option value="detective">Detective</option>
-      <option value="prober">Prober</option>
-    </select>
+    <select id="strategyA"></select>
+    <p id="labelA" class="label-nature"></p>
 
     <label for="strategyB">Player B Strategy:</label>
-    <select id="strategyB" class="material-select">
-      <option value="random">Random</option>
-      <option value="alwaysCooperate">Always Cooperate</option>
-      <option value="alwaysDefect">Always Defect</option>
-      <option value="titForTat">Tit for Tat</option>
-      <option value="grudger">Grudger</option>
-      <option value="forgivingTitForTat">Forgiving Tit for Tat</option>
-      <option value="pavlov">Pavlov</option>
-      <option value="friedman">Friedman</option>
-      <option value="feld">Feld</option>
-      <option value="randomNoise">Random Noise</option>
-      <option value="titForTwoTats">Tit for Two Tats</option>
-      <option value="hardMajority">Hard Majority</option>
-      <option value="softMajority">Soft Majority</option>
-      <option value="detective">Detective</option>
-      <option value="prober">Prober</option>
-    </select>
+    <select id="strategyB"></select>
+    <p id="labelB" class="label-nature"></p>
 
     <button onclick="startSimulation()">Start Simulation</button>
   </div>
@@ -75,6 +34,10 @@
       <p>Player B Score: <span id="scoreB">0</span></p>
     </div>
   </div>
+
+ 
+
+ 
 
   <script src="script.js"></script>
 </body>
