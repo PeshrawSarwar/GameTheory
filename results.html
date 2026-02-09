@@ -2,25 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Game Results</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="results.css" />
 </head>
 <body>
-  <h1>Prisoner's Dilemma Results</h1>
-  <table id="resultsTable" class="md-table">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Player A Strategy</th>
-        <th>Player A Final Score</th>
-        <th>Player B Strategy</th>
-        <th>Player B Final Score</th>
-        <th>Winner</th>
-      </tr>
-    </thead>
-    <tbody id="tableBody"></tbody>
-  </table>
+  <main class="results-shell">
+    <header class="results-header">
+      <p class="eyebrow">Persistent history</p>
+      <h1>Prisoner's Dilemma Match Results</h1>
+      <p>Browse previously saved games from the backend API.</p>
+      <a href="index.html">← Back to simulator</a>
+    </header>
+
+    <section class="results-card">
+      <div class="table-head">
+        <h2>Saved matches</h2>
+        <span id="resultsStatus">Loading…</span>
+      </div>
+      <table id="resultsTable" class="results-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Player A Strategy</th>
+            <th>Player A Score</th>
+            <th>Player B Strategy</th>
+            <th>Player B Score</th>
+            <th>Winner</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </section>
+  </main>
 
   <script src="history.js"></script>
 </body>

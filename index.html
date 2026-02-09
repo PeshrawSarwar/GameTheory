@@ -2,42 +2,65 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Prisoner's Dilemma Simulator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Prisoner's Dilemma Game</h1>
+  <main class="app-shell">
+    <header class="hero">
+      <p class="eyebrow">Interactive game theory lab</p>
+      <h1>Prisoner's Dilemma Simulator</h1>
+      <p class="subtitle">Pick two strategies, run 200 rounds, and watch long-term behavior emerge in real time.</p>
+    </header>
 
-  <div id="finalSummary" class="final-summary" style="display: none;">
-    <h2>Final Result</h2>
-    <p id="finalText"></p>
-  </div>
+    <section class="control-panel card">
+      <div class="strategy-grid">
+        <div class="strategy-select">
+          <label for="strategyA">Player A strategy</label>
+          <select id="strategyA"></select>
+          <p id="labelA" class="label-nature"></p>
+        </div>
 
-  <div class="controls">
-    <label for="strategyA">Player A Strategy:</label>
-    <select id="strategyA"></select>
-    <p id="labelA" class="label-nature"></p>
+        <div class="strategy-select">
+          <label for="strategyB">Player B strategy</label>
+          <select id="strategyB"></select>
+          <p id="labelB" class="label-nature"></p>
+        </div>
+      </div>
 
-    <label for="strategyB">Player B Strategy:</label>
-    <select id="strategyB"></select>
-    <p id="labelB" class="label-nature"></p>
+      <div class="actions-row">
+        <button id="startBtn" class="primary-btn" onclick="startSimulation()">Run simulation</button>
+        <a class="ghost-link" href="results.html">View match history</a>
+        <span id="apiStatus" class="api-status">Ready to run</span>
+      </div>
+    </section>
 
-    <button onclick="startSimulation()">Start Simulation</button>
-  </div>
+    <section id="finalSummary" class="final-summary card" style="display: none;">
+      <h2>Final Result</h2>
+      <p id="finalText"></p>
+    </section>
 
-  <div class="result">
-    <h3>Round <span id="round">1</span>/200</h3>
-    <div id="roundDetails"></div>
-    <div class="scoreboard">
-      <p>Player A Score: <span id="scoreA">0</span></p>
-      <p>Player B Score: <span id="scoreB">0</span></p>
-    </div>
-  </div>
-
- 
-
- 
+    <section class="result card">
+      <div class="result-header">
+        <h3>Round <span id="round">1</span>/200</h3>
+        <div class="scoreboard">
+          <div class="score-pill">
+            <span>Player A</span>
+            <strong id="scoreA">0</strong>
+          </div>
+          <div class="score-pill">
+            <span>Player B</span>
+            <strong id="scoreB">0</strong>
+          </div>
+        </div>
+      </div>
+      <div id="roundDetails" class="round-feed"></div>
+    </section>
+  </main>
 
   <script src="script.js"></script>
 </body>
