@@ -32,6 +32,104 @@
         </div>
       </div>
 
+      <div class="customization-grid">
+        <div class="custom-card">
+          <h3>Gameplay settings</h3>
+          <div class="field">
+            <label for="roundsInput">Total rounds</label>
+            <input id="roundsInput" type="number" min="1" max="1000" value="200" />
+          </div>
+          <div class="field">
+            <label for="seedInput">Random seed (optional)</label>
+            <input id="seedInput" type="text" placeholder="Leave blank for random" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <label for="noiseInput">Decision noise</label>
+              <span id="noiseValue" class="range-value">0%</span>
+            </div>
+            <input id="noiseInput" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <label for="forgivenessInput">Forgiveness</label>
+              <span id="forgivenessValue" class="range-value">0%</span>
+            </div>
+            <input id="forgivenessInput" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <label for="mutationInput">Mutation rate</label>
+              <span id="mutationValue" class="range-value">0%</span>
+            </div>
+            <input id="mutationInput" type="range" min="0" max="1" step="0.01" value="0" />
+          </div>
+        </div>
+
+        <div class="custom-card">
+          <h3>Payoff matrix</h3>
+          <p class="helper-text">Edit the reward pairs for each outcome (A, B).</p>
+          <div class="matrix-grid">
+            <div class="matrix-row">
+              <span>Cooperate / Cooperate</span>
+              <div class="matrix-inputs">
+                <input id="payoffCC_A" type="number" value="1" />
+                <input id="payoffCC_B" type="number" value="1" />
+              </div>
+            </div>
+            <div class="matrix-row">
+              <span>Cooperate / Defect</span>
+              <div class="matrix-inputs">
+                <input id="payoffCD_A" type="number" value="-3" />
+                <input id="payoffCD_B" type="number" value="0" />
+              </div>
+            </div>
+            <div class="matrix-row">
+              <span>Defect / Cooperate</span>
+              <div class="matrix-inputs">
+                <input id="payoffDC_A" type="number" value="0" />
+                <input id="payoffDC_B" type="number" value="-3" />
+              </div>
+            </div>
+            <div class="matrix-row">
+              <span>Defect / Defect</span>
+              <div class="matrix-inputs">
+                <input id="payoffDD_A" type="number" value="-2" />
+                <input id="payoffDD_B" type="number" value="-2" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="custom-card">
+          <h3>Strategy mix & weights</h3>
+          <p class="helper-text">Enable a weighted mix to sample strategies each round.</p>
+          <div class="mix-columns">
+            <div class="mix-panel">
+              <div class="mix-header">
+                <h4>Player A mix</h4>
+                <label class="toggle">
+                  <input id="mixAEnabled" type="checkbox" />
+                  Use mix
+                </label>
+              </div>
+              <div id="mixAList" class="mix-list"></div>
+            </div>
+            <div class="mix-panel">
+              <div class="mix-header">
+                <h4>Player B mix</h4>
+                <label class="toggle">
+                  <input id="mixBEnabled" type="checkbox" />
+                  Use mix
+                </label>
+              </div>
+              <div id="mixBList" class="mix-list"></div>
+            </div>
+          </div>
+          <p class="helper-text">Weights normalize automatically. If all weights are 0, the selected strategy is used.</p>
+        </div>
+      </div>
+
       <div class="actions-row">
         <button id="startBtn" class="primary-btn" onclick="startSimulation()">Run simulation</button>
         <a class="ghost-link" href="results.html">View match history</a>
@@ -46,7 +144,7 @@
 
     <section class="result card">
       <div class="result-header">
-        <h3>Round <span id="round">1</span>/200</h3>
+        <h3>Round <span id="round">1</span>/<span id="roundTotal">200</span></h3>
         <div class="scoreboard">
           <div class="score-pill">
             <span>Player A</span>
