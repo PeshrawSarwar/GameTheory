@@ -6,36 +6,83 @@
   <title>Game Results</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="results.css" />
 </head>
 <body>
   <main class="results-shell">
-    <header class="results-header">
-      <p class="eyebrow">Persistent history</p>
-      <h1>Prisoner's Dilemma Match Results</h1>
-      <p>Browse previously saved games from the backend API.</p>
-      <a href="index.html">← Back to simulator</a>
+    <header class="results-hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Persistent history</p>
+        <h1>Prisoner's Dilemma Results</h1>
+        <p class="hero-subtitle">Track how strategies performed across saved simulations and compare outcomes at a glance.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="ghost-link" href="index.html">Back to simulator</a>
+        <button id="refreshBtn" class="primary-btn" type="button">Refresh results</button>
+      </div>
     </header>
+
+    <section class="stats-grid">
+      <article class="stat-card">
+        <p class="stat-label">Total matches</p>
+        <p class="stat-value" id="totalMatches">0</p>
+        <p class="stat-meta" id="resultsStatus">Loading…</p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Avg Player A score</p>
+        <p class="stat-value" id="avgAScore">0</p>
+        <p class="stat-meta">Across all saved matches</p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Avg Player B score</p>
+        <p class="stat-value" id="avgBScore">0</p>
+        <p class="stat-meta">Across all saved matches</p>
+      </article>
+      <article class="stat-card">
+        <p class="stat-label">Dominant outcome</p>
+        <p class="stat-value" id="dominantOutcome">—</p>
+        <p class="stat-meta" id="topStrategy">—</p>
+      </article>
+    </section>
 
     <section class="results-card">
       <div class="table-head">
-        <h2>Saved matches</h2>
-        <span id="resultsStatus">Loading…</span>
+        <div>
+          <h2>Saved matches</h2>
+          <p class="subtle">Filter by strategy or winner to focus on specific patterns.</p>
+        </div>
+        <div class="table-controls">
+          <label class="control">
+            <span>Search strategies</span>
+            <input id="searchInput" type="search" placeholder="Tit for Tat, Always Defect…" />
+          </label>
+          <label class="control">
+            <span>Winner</span>
+            <select id="winnerFilter">
+              <option value="all">All outcomes</option>
+              <option value="a">Player A</option>
+              <option value="b">Player B</option>
+              <option value="tie">Tie</option>
+            </select>
+          </label>
+        </div>
       </div>
-      <table id="resultsTable" class="results-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Player A Strategy</th>
-            <th>Player A Score</th>
-            <th>Player B Strategy</th>
-            <th>Player B Score</th>
-            <th>Winner</th>
-          </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="resultsTable" class="results-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Player A Strategy</th>
+              <th>Player A Score</th>
+              <th>Player B Strategy</th>
+              <th>Player B Score</th>
+              <th>Outcome</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
     </section>
   </main>
 
