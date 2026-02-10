@@ -34,10 +34,18 @@
 
       <div class="customization-grid">
         <div class="custom-card">
+          <h3>Simulation controls</h3>
           <h3>Gameplay settings</h3>
           <div class="field">
             <label for="roundsInput">Total rounds</label>
             <input id="roundsInput" type="number" min="1" max="1000" value="200" />
+          </div>
+          <div class="field">
+            <div class="field-row">
+              <label for="speedInput">Round speed</label>
+              <span id="speedValue" class="range-value">50 ms</span>
+            </div>
+            <input id="speedInput" type="range" min="0" max="200" step="5" value="50" />
           </div>
           <div class="field">
             <label for="seedInput">Random seed (optional)</label>
@@ -130,8 +138,19 @@
         </div>
       </div>
 
+      <div class="settings-row">
+        <label class="toggle">
+          <input id="autoSaveToggle" type="checkbox" checked />
+          Auto-save settings
+        </label>
+        <button id="saveSettingsBtn" class="secondary-btn" type="button">Save settings</button>
+        <button id="resetSettingsBtn" class="secondary-btn" type="button">Reset defaults</button>
+      </div>
+
       <div class="actions-row">
         <button id="startBtn" class="primary-btn" onclick="startSimulation()">Run simulation</button>
+        <button id="pauseBtn" class="secondary-btn" type="button" onclick="togglePause()" disabled>Pause</button>
+        <button id="stepBtn" class="secondary-btn" type="button" onclick="stepRound()" disabled>Step</button>
         <a class="ghost-link" href="results.html">View match history</a>
         <span id="apiStatus" class="api-status">Ready to run</span>
       </div>
@@ -143,6 +162,9 @@
     </section>
 
     <section class="result card">
+      <div class="round-progress" role="progressbar" aria-label="Simulation progress" aria-valuemin="0" aria-valuemax="200" aria-valuenow="0">
+        <span id="progressFill" class="round-progress__fill"></span>
+      </div>
       <div class="result-header">
         <h3>Round <span id="round">1</span>/<span id="roundTotal">200</span></h3>
         <div class="scoreboard">

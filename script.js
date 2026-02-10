@@ -29,6 +29,28 @@ let payoffMatrix = {
   'Defect,Defect': [-2, -2]
 };
 
+function hashStringToSeed(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash) || 1;
+}
+
+function createSeededRng(seed) {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 48271) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
+}
+
+function randomUnit() {
+  return seededRandom ? seededRandom() : Math.random();
+}
+
 const strategies = {
   random: () => (randomUnit() < 0.5 ? 'Cooperate' : 'Defect'),
   alwaysCooperate: () => 'Cooperate',
@@ -113,6 +135,29 @@ function setNatureLabel(labelNode, strategyKey) {
   labelNode.className = `label-nature ${type}`;
 }
 
+function buildMixControls(strategyList) {
+  const lists = [
+    document.getElementById('mixAList'),
+    document.getElementById('mixBList')
+  ];
+
+  lists.forEach((list) => {
+    list.innerHTML = '';
+    strategyList.forEach((key) => {
+      const row = document.createElement('div');
+      row.className = 'mix-row';
+      row.dataset.key = key;
+      row.innerHTML = `
+        <label>
+          <input type="checkbox" value="${key}" />
+          <span>${key}</span>
+        </label>
+        <input type="number" min="0" max="100" step="1" value="0" />`;
+      list.appendChild(row);
+    });
+  });
+}
+
 function populateStrategyDropdown() {
   const strategyList = Object.keys(strategies);
   const selects = [document.getElementById('strategyA'), document.getElementById('strategyB')];
@@ -132,6 +177,7 @@ function populateStrategyDropdown() {
     select.onchange = () => {
       if (isRunning) return;
       setNatureLabel(labels[index], select.value);
+      maybeAutoSave();
     };
   });
 
@@ -161,6 +207,17 @@ function setControlsDisabled(disabled) {
   startBtn.textContent = disabled ? 'Simulation running…' : 'Run simulation';
 }
 
+function setActionButtons() {
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stepBtn = document.getElementById('stepBtn');
+
+  if (!pauseBtn || !stepBtn) return;
+
+  pauseBtn.disabled = !isRunning;
+  pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
+  stepBtn.disabled = !isRunning || !isPaused;
+}
+
 function resetGame() {
   scoreA = 0;
   scoreB = 0;
@@ -169,6 +226,7 @@ function resetGame() {
   document.getElementById('scoreA').textContent = scoreA;
   document.getElementById('scoreB').textContent = scoreB;
   document.getElementById('round').textContent = round;
+  updateProgress(0);
   document.getElementById('finalSummary').style.display = 'none';
 }
 
@@ -275,10 +333,88 @@ async function saveResults(payload) {
   }
 }
 
+function advanceRound(state) {
+  const { stratA, stratB, historyA, historyB, noiseRate, forgivenessRate, mutationRate, mixA, mixB } = state;
+  const chosenStratA = mixA ? chooseWeighted(mixA) || stratA : stratA;
+  const chosenStratB = mixB ? chooseWeighted(mixB) || stratB : stratB;
+
+  const choiceA = getChoice(chosenStratA, historyA, historyB, noiseRate, forgivenessRate, mutationRate);
+  const choiceB = getChoice(chosenStratB, historyB, historyA, noiseRate, forgivenessRate, mutationRate);
+
+  historyA.push(choiceA);
+  historyB.push(choiceB);
+
+  const key = `${choiceA},${choiceB}`;
+  const [aPayoff, bPayoff] = payoffMatrix[key];
+
+  scoreA += aPayoff;
+  scoreB += bPayoff;
+
+  document.getElementById('round').textContent = round;
+  document.getElementById('scoreA').textContent = scoreA;
+  document.getElementById('scoreB').textContent = scoreB;
+  updateProgress(round);
+
+  const roundDetails = document.getElementById('roundDetails');
+  const entry = document.createElement('div');
+  entry.className = 'round-entry';
+  entry.innerHTML = `<strong>Round ${round}</strong>: A - ${choiceA} (${chosenStratA}), B - ${choiceB} (${chosenStratB}) ⇒ A: ${aPayoff}, B: ${bPayoff}`;
+  roundDetails.appendChild(entry);
+  roundDetails.scrollTop = roundDetails.scrollHeight;
+
+  if (round < totalRounds) {
+    round += 1;
+    return true;
+  }
+
+  finishSimulation(state);
+  return false;
+}
+
+function finishSimulation(state) {
+  const { stratA, stratB } = state;
+  const winner = scoreA > scoreB ? 'Player A Wins 🏆' : scoreB > scoreA ? 'Player B Wins 🏆' : 'Draw 🤝';
+  const roundDetails = document.getElementById('roundDetails');
+  const finalMsg = document.createElement('div');
+  finalMsg.className = 'round-entry final';
+  finalMsg.innerHTML = `<strong>Game Over!</strong><br>Final Score — Player A: ${scoreA}, Player B: ${scoreB}<br><strong>${winner}</strong>`;
+  roundDetails.appendChild(finalMsg);
+  roundDetails.scrollTop = roundDetails.scrollHeight;
+
+  document.getElementById('finalSummary').style.display = 'block';
+  document.getElementById('finalText').textContent = `Player A: ${scoreA} — Player B: ${scoreB} | ${winner}`;
+
+  saveResults({
+    playerA: stratA,
+    playerB: stratB,
+    scoreA,
+    scoreB
+  }).finally(() => {
+    seededRandom = null;
+    isRunning = false;
+    isPaused = false;
+    pendingTimeout = null;
+    activeState = null;
+    setControlsDisabled(false);
+    setActionButtons();
+  });
+}
+
+function scheduleNextRound(state) {
+  if (!isRunning || isPaused) return;
+  pendingTimeout = setTimeout(() => {
+    if (advanceRound(state)) {
+      scheduleNextRound(state);
+    }
+  }, speedMs);
+}
+
 function startSimulation() {
   if (isRunning) return;
 
   isRunning = true;
+  isPaused = false;
+  setActionButtons();
   setControlsDisabled(true);
   setApiStatus('Simulation in progress…');
   resetGame();
@@ -308,18 +444,29 @@ function startSimulation() {
     const choiceA = getChoice(chosenStratA, historyA, historyB, noiseRate, forgivenessRate, mutationRate);
     const choiceB = getChoice(chosenStratB, historyB, historyA, noiseRate, forgivenessRate, mutationRate);
 
-    historyA.push(choiceA);
-    historyB.push(choiceB);
+  const seedValue = document.getElementById('seedInput').value.trim();
+  seededRandom = seedValue ? createSeededRng(hashStringToSeed(seedValue)) : null;
 
-    const key = `${choiceA},${choiceB}`;
-    const [aPayoff, bPayoff] = payoffMatrix[key];
+  const noiseRate = clampNumber(getNumericValue('noiseInput', 0), 0, 1);
+  const forgivenessRate = clampNumber(getNumericValue('forgivenessInput', 0), 0, 1);
+  const mutationRate = clampNumber(getNumericValue('mutationInput', 0), 0, 1);
 
-    scoreA += aPayoff;
-    scoreB += bPayoff;
+  const useMixA = document.getElementById('mixAEnabled').checked;
+  const useMixB = document.getElementById('mixBEnabled').checked;
+  const mixA = useMixA ? readMixConfig('mixAList') : null;
+  const mixB = useMixB ? readMixConfig('mixBList') : null;
 
-    document.getElementById('round').textContent = round;
-    document.getElementById('scoreA').textContent = scoreA;
-    document.getElementById('scoreB').textContent = scoreB;
+  activeState = {
+    stratA,
+    stratB,
+    historyA: [],
+    historyB: [],
+    noiseRate,
+    forgivenessRate,
+    mutationRate,
+    mixA,
+    mixB
+  };
 
     const roundDetails = document.getElementById('roundDetails');
     const entry = document.createElement('div');
@@ -328,11 +475,21 @@ function startSimulation() {
     roundDetails.appendChild(entry);
     roundDetails.scrollTop = roundDetails.scrollHeight;
 
-    if (round < totalRounds) {
-      round += 1;
-      setTimeout(playRound, 50);
-      return;
-    }
+function togglePause() {
+  if (!isRunning) return;
+  isPaused = !isPaused;
+  if (pendingTimeout) {
+    clearTimeout(pendingTimeout);
+    pendingTimeout = null;
+  }
+  setActionButtons();
+  if (!isPaused && activeState) {
+    setApiStatus('Simulation in progress…');
+    scheduleNextRound(activeState);
+  } else {
+    setApiStatus('Simulation paused');
+  }
+}
 
     const winner = scoreA > scoreB ? 'Player A Wins 🏆' : scoreB > scoreA ? 'Player B Wins 🏆' : 'Draw 🤝';
     const finalMsg = document.createElement('div');
@@ -355,8 +512,58 @@ function startSimulation() {
       setControlsDisabled(false);
     });
   }
+}
 
-  playRound();
+function wireInputs() {
+  updateRangeValue('noiseInput', 'noiseValue');
+  updateRangeValue('forgivenessInput', 'forgivenessValue');
+  updateRangeValue('mutationInput', 'mutationValue');
+  updateRangeValue('speedInput', 'speedValue', 'ms');
+  updateRoundTotalDisplay(document.getElementById('roundsInput').value);
+
+  document.getElementById('noiseInput').addEventListener('input', () => {
+    updateRangeValue('noiseInput', 'noiseValue');
+    maybeAutoSave();
+  });
+  document.getElementById('forgivenessInput').addEventListener('input', () => {
+    updateRangeValue('forgivenessInput', 'forgivenessValue');
+    maybeAutoSave();
+  });
+  document.getElementById('mutationInput').addEventListener('input', () => {
+    updateRangeValue('mutationInput', 'mutationValue');
+    maybeAutoSave();
+  });
+  document.getElementById('speedInput').addEventListener('input', () => {
+    updateRangeValue('speedInput', 'speedValue', 'ms');
+    maybeAutoSave();
+  });
+  document.getElementById('roundsInput').addEventListener('input', (event) => {
+    const value = clampNumber(Math.floor(Number.parseFloat(event.target.value) || 1), 1, 1000);
+    updateRoundTotalDisplay(value);
+    maybeAutoSave();
+  });
+  document.getElementById('seedInput').addEventListener('input', maybeAutoSave);
+  document.getElementById('mixAEnabled').addEventListener('change', maybeAutoSave);
+  document.getElementById('mixBEnabled').addEventListener('change', maybeAutoSave);
+
+  document.getElementById('mixAList').addEventListener('input', maybeAutoSave);
+  document.getElementById('mixBList').addEventListener('input', maybeAutoSave);
+
+  const payoffInputs = document.querySelectorAll('.matrix-inputs input');
+  payoffInputs.forEach((input) => {
+    input.addEventListener('input', maybeAutoSave);
+  });
+
+  document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+  document.getElementById('resetSettingsBtn').addEventListener('click', resetDefaults);
+}
+
+function initialize() {
+  populateStrategyDropdown();
+  applySettings(defaultSettings);
+  loadSettings();
+  wireInputs();
+  setActionButtons();
 }
 
 function wireInputs() {
