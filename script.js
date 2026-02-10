@@ -2,33 +2,8 @@ let scoreA = 0;
 let scoreB = 0;
 let round = 1;
 let totalRounds = 200;
-let speedMs = 50;
 let isRunning = false;
-let isPaused = false;
-let pendingTimeout = null;
 let seededRandom = null;
-let activeState = null;
-
-const SETTINGS_KEY = 'pd-simulator-settings-v2';
-
-const defaultSettings = {
-  rounds: 200,
-  speed: 50,
-  seed: '',
-  noise: 0,
-  forgiveness: 0,
-  mutation: 0,
-  payoff: {
-    CC: [1, 1],
-    CD: [-3, 0],
-    DC: [0, -3],
-    DD: [-2, -2]
-  },
-  mixAEnabled: false,
-  mixBEnabled: false,
-  mixA: [],
-  mixB: []
-};
 
 const strategyNature = {
   random: 'nasty',
@@ -108,14 +83,32 @@ function setApiStatus(message, state = 'neutral') {
   status.style.color = state === 'ok' ? '#1f9f5a' : state === 'error' ? '#d83a52' : '#5b6472';
 }
 
+function hashStringToSeed(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return Math.abs(hash) || 1;
+}
+
+function createSeededRng(seed) {
+  let state = seed % 2147483647;
+  if (state <= 0) state += 2147483646;
+  return () => {
+    state = (state * 48271) % 2147483647;
+    return (state - 1) / 2147483646;
+  };
+}
+
+function randomUnit() {
+  return seededRandom ? seededRandom() : Math.random();
+}
+
 function getNumericValue(id, fallback = 0) {
   const raw = document.getElementById(id)?.value;
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function clampNumber(value, min, max) {
-  return Math.max(min, Math.min(max, value));
 }
 
 function getChoice(strategy, selfHistory, oppHistory, noiseRate, forgivenessRate, mutationRate) {
@@ -192,37 +185,23 @@ function populateStrategyDropdown() {
 }
 
 function setControlsDisabled(disabled) {
-  const inputIds = [
-    'strategyA',
-    'strategyB',
-    'roundsInput',
-    'seedInput',
-    'noiseInput',
-    'forgivenessInput',
-    'mutationInput',
-    'speedInput',
-    'mixAEnabled',
-    'mixBEnabled',
-    'autoSaveToggle',
-    'saveSettingsBtn',
-    'resetSettingsBtn'
-  ];
-
-  inputIds.forEach((id) => {
-    const node = document.getElementById(id);
-    if (node) node.disabled = disabled;
-  });
-
+  document.getElementById('strategyA').disabled = disabled;
+  document.getElementById('strategyB').disabled = disabled;
+  document.getElementById('roundsInput').disabled = disabled;
+  document.getElementById('seedInput').disabled = disabled;
+  document.getElementById('noiseInput').disabled = disabled;
+  document.getElementById('forgivenessInput').disabled = disabled;
+  document.getElementById('mutationInput').disabled = disabled;
+  document.getElementById('mixAEnabled').disabled = disabled;
+  document.getElementById('mixBEnabled').disabled = disabled;
   const mixInputs = document.querySelectorAll('.mix-list input');
   mixInputs.forEach((input) => {
     input.disabled = disabled;
   });
-
   const payoffInputs = document.querySelectorAll('.matrix-inputs input');
   payoffInputs.forEach((input) => {
     input.disabled = disabled;
   });
-
   const startBtn = document.getElementById('startBtn');
   startBtn.disabled = disabled;
   startBtn.textContent = disabled ? 'Simulation running…' : 'Run simulation';
@@ -249,23 +228,6 @@ function resetGame() {
   document.getElementById('round').textContent = round;
   updateProgress(0);
   document.getElementById('finalSummary').style.display = 'none';
-}
-
-function updateProgress(currentRound) {
-  const progress = document.querySelector('.round-progress');
-  const fill = document.getElementById('progressFill');
-  if (!progress || !fill) return;
-  const clampedRound = Math.max(0, Math.min(currentRound, totalRounds));
-  const percent = totalRounds ? (clampedRound / totalRounds) * 100 : 0;
-  fill.style.width = `${percent}%`;
-  progress.setAttribute('aria-valuenow', String(clampedRound));
-}
-
-function updateRoundTotalDisplay(value) {
-  const totalLabel = document.getElementById('roundTotal');
-  const progress = document.querySelector('.round-progress');
-  if (totalLabel) totalLabel.textContent = value;
-  if (progress) progress.setAttribute('aria-valuemax', String(value));
 }
 
 function readPayoffMatrix() {
@@ -313,8 +275,8 @@ function readMixConfig(listId) {
   const rows = list.querySelectorAll('.mix-row');
   const items = [];
   rows.forEach((row) => {
-    const checkbox = row.querySelector('input[type="checkbox"]');
-    const weightInput = row.querySelector('input[type="number"]');
+    const checkbox = row.querySelector('input[type=\"checkbox\"]');
+    const weightInput = row.querySelector('input[type=\"number\"]');
     if (!checkbox || !weightInput) return;
     if (!checkbox.checked) return;
     items.push({
@@ -325,134 +287,32 @@ function readMixConfig(listId) {
   return normalizeWeights(items);
 }
 
-function collectMixSettings(listId) {
-  const list = document.getElementById(listId);
-  const rows = list.querySelectorAll('.mix-row');
-  const result = [];
-  rows.forEach((row) => {
-    const checkbox = row.querySelector('input[type="checkbox"]');
-    const weightInput = row.querySelector('input[type="number"]');
-    if (!checkbox || !weightInput) return;
-    result.push({
-      key: checkbox.value,
-      enabled: checkbox.checked,
-      weight: Number.parseFloat(weightInput.value) || 0
-    });
-  });
-  return result;
-}
-
-function applyMixSettings(listId, mixSettings) {
-  if (!Array.isArray(mixSettings)) return;
-  const list = document.getElementById(listId);
-  const rows = list.querySelectorAll('.mix-row');
-  rows.forEach((row) => {
-    const key = row.dataset.key;
-    const match = mixSettings.find((item) => item.key === key);
-    const checkbox = row.querySelector('input[type="checkbox"]');
-    const weightInput = row.querySelector('input[type="number"]');
-    if (!checkbox || !weightInput || !match) return;
-    checkbox.checked = Boolean(match.enabled);
-    weightInput.value = Number.isFinite(match.weight) ? match.weight : 0;
-  });
-}
-
-function collectSettings() {
-  return {
-    rounds: clampNumber(Math.floor(getNumericValue('roundsInput', 200)), 1, 1000),
-    speed: clampNumber(Math.floor(getNumericValue('speedInput', 50)), 0, 200),
-    seed: document.getElementById('seedInput').value.trim(),
-    noise: clampNumber(getNumericValue('noiseInput', 0), 0, 1),
-    forgiveness: clampNumber(getNumericValue('forgivenessInput', 0), 0, 1),
-    mutation: clampNumber(getNumericValue('mutationInput', 0), 0, 1),
-    payoff: {
-      CC: [getNumericValue('payoffCC_A', 1), getNumericValue('payoffCC_B', 1)],
-      CD: [getNumericValue('payoffCD_A', -3), getNumericValue('payoffCD_B', 0)],
-      DC: [getNumericValue('payoffDC_A', 0), getNumericValue('payoffDC_B', -3)],
-      DD: [getNumericValue('payoffDD_A', -2), getNumericValue('payoffDD_B', -2)]
-    },
-    mixAEnabled: document.getElementById('mixAEnabled').checked,
-    mixBEnabled: document.getElementById('mixBEnabled').checked,
-    mixA: collectMixSettings('mixAList'),
-    mixB: collectMixSettings('mixBList')
-  };
-}
-
-function applySettings(settings) {
-  const safe = settings || defaultSettings;
-  document.getElementById('roundsInput').value = safe.rounds ?? defaultSettings.rounds;
-  document.getElementById('speedInput').value = safe.speed ?? defaultSettings.speed;
-  document.getElementById('seedInput').value = safe.seed ?? '';
-  document.getElementById('noiseInput').value = safe.noise ?? 0;
-  document.getElementById('forgivenessInput').value = safe.forgiveness ?? 0;
-  document.getElementById('mutationInput').value = safe.mutation ?? 0;
-
-  const payoff = safe.payoff || defaultSettings.payoff;
-  document.getElementById('payoffCC_A').value = payoff.CC?.[0] ?? 1;
-  document.getElementById('payoffCC_B').value = payoff.CC?.[1] ?? 1;
-  document.getElementById('payoffCD_A').value = payoff.CD?.[0] ?? -3;
-  document.getElementById('payoffCD_B').value = payoff.CD?.[1] ?? 0;
-  document.getElementById('payoffDC_A').value = payoff.DC?.[0] ?? 0;
-  document.getElementById('payoffDC_B').value = payoff.DC?.[1] ?? -3;
-  document.getElementById('payoffDD_A').value = payoff.DD?.[0] ?? -2;
-  document.getElementById('payoffDD_B').value = payoff.DD?.[1] ?? -2;
-
-  document.getElementById('mixAEnabled').checked = Boolean(safe.mixAEnabled);
-  document.getElementById('mixBEnabled').checked = Boolean(safe.mixBEnabled);
-  applyMixSettings('mixAList', safe.mixA);
-  applyMixSettings('mixBList', safe.mixB);
-
-  updateRangeValue('noiseInput', 'noiseValue');
-  updateRangeValue('forgivenessInput', 'forgivenessValue');
-  updateRangeValue('mutationInput', 'mutationValue');
-  updateRangeValue('speedInput', 'speedValue', 'ms');
-  updateRoundTotalDisplay(document.getElementById('roundsInput').value);
-}
-
-function saveSettings() {
-  const settings = collectSettings();
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  if (!isRunning) {
-    setApiStatus('Settings saved', 'ok');
-  }
-}
-
-function loadSettings() {
-  const stored = localStorage.getItem(SETTINGS_KEY);
-  if (!stored) return;
-  try {
-    const parsed = JSON.parse(stored);
-    applySettings(parsed);
-  } catch (error) {
-    localStorage.removeItem(SETTINGS_KEY);
-  }
-}
-
-function resetDefaults() {
-  applySettings(defaultSettings);
-  localStorage.removeItem(SETTINGS_KEY);
-  if (!isRunning) {
-    setApiStatus('Defaults restored', 'ok');
-  }
-}
-
-function maybeAutoSave() {
-  const autoSave = document.getElementById('autoSaveToggle');
-  if (autoSave && autoSave.checked) {
-    saveSettings();
-  }
-}
-
-function updateRangeValue(inputId, valueId, suffix = '%') {
+function updateRangeValue(inputId, valueId) {
   const input = document.getElementById(inputId);
   const label = document.getElementById(valueId);
   if (!input || !label) return;
-  const value = parseFloat(input.value);
-  if (Number.isNaN(value)) return;
-  const display = suffix === '%'
-    ? `${Math.round(value * 100)}${suffix}`
-    : `${Math.round(value)} ${suffix}`;
-  label.textContent = display;
+  label.textContent = `${Math.round(parseFloat(input.value) * 100)}%`;
+}
+
+function buildMixControls(strategyList) {
+  const lists = [
+    document.getElementById('mixAList'),
+    document.getElementById('mixBList')
+  ];
+  lists.forEach((list) => {
+    list.innerHTML = '';
+    strategyList.forEach((key) => {
+      const row = document.createElement('div');
+      row.className = 'mix-row';
+      row.innerHTML = `
+        <label>
+          <input type=\"checkbox\" value=\"${key}\" />
+          <span>${key}</span>
+        </label>
+        <input type=\"number\" min=\"0\" max=\"100\" step=\"1\" value=\"0\" />`;
+      list.appendChild(row);
+    });
+  });
 }
 
 async function saveResults(payload) {
@@ -562,9 +422,27 @@ function startSimulation() {
 
   const stratA = document.getElementById('strategyA').value;
   const stratB = document.getElementById('strategyB').value;
-  totalRounds = clampNumber(Math.floor(getNumericValue('roundsInput', 200)), 1, 1000);
-  speedMs = clampNumber(Math.floor(getNumericValue('speedInput', 50)), 0, 200);
-  updateRoundTotalDisplay(totalRounds);
+  totalRounds = Math.max(1, Math.min(1000, Math.floor(getNumericValue('roundsInput', 200))));
+  document.getElementById('roundTotal').textContent = totalRounds;
+  const seedValue = document.getElementById('seedInput').value.trim();
+  seededRandom = seedValue ? createSeededRng(hashStringToSeed(seedValue)) : null;
+  const noiseRate = getNumericValue('noiseInput', 0);
+  const forgivenessRate = getNumericValue('forgivenessInput', 0);
+  const mutationRate = getNumericValue('mutationInput', 0);
+  const useMixA = document.getElementById('mixAEnabled').checked;
+  const useMixB = document.getElementById('mixBEnabled').checked;
+  const mixA = useMixA ? readMixConfig('mixAList') : null;
+  const mixB = useMixB ? readMixConfig('mixBList') : null;
+
+  const historyA = [];
+  const historyB = [];
+
+  function playRound() {
+    const chosenStratA = mixA ? chooseWeighted(mixA) || stratA : stratA;
+    const chosenStratB = mixB ? chooseWeighted(mixB) || stratB : stratB;
+
+    const choiceA = getChoice(chosenStratA, historyA, historyB, noiseRate, forgivenessRate, mutationRate);
+    const choiceB = getChoice(chosenStratB, historyB, historyA, noiseRate, forgivenessRate, mutationRate);
 
   const seedValue = document.getElementById('seedInput').value.trim();
   seededRandom = seedValue ? createSeededRng(hashStringToSeed(seedValue)) : null;
@@ -590,10 +468,12 @@ function startSimulation() {
     mixB
   };
 
-  if (advanceRound(activeState)) {
-    scheduleNextRound(activeState);
-  }
-}
+    const roundDetails = document.getElementById('roundDetails');
+    const entry = document.createElement('div');
+    entry.className = 'round-entry';
+    entry.innerHTML = `<strong>Round ${round}</strong>: A - ${choiceA} (${chosenStratA}), B - ${choiceB} (${chosenStratB}) ⇒ A: ${aPayoff}, B: ${bPayoff}`;
+    roundDetails.appendChild(entry);
+    roundDetails.scrollTop = roundDetails.scrollHeight;
 
 function togglePause() {
   if (!isRunning) return;
@@ -611,10 +491,26 @@ function togglePause() {
   }
 }
 
-function stepRound() {
-  if (!isRunning || !isPaused || !activeState) return;
-  if (advanceRound(activeState)) {
-    setActionButtons();
+    const winner = scoreA > scoreB ? 'Player A Wins 🏆' : scoreB > scoreA ? 'Player B Wins 🏆' : 'Draw 🤝';
+    const finalMsg = document.createElement('div');
+    finalMsg.className = 'round-entry final';
+    finalMsg.innerHTML = `<strong>Game Over!</strong><br>Final Score — Player A: ${scoreA}, Player B: ${scoreB}<br><strong>${winner}</strong>`;
+    roundDetails.appendChild(finalMsg);
+    roundDetails.scrollTop = roundDetails.scrollHeight;
+
+    document.getElementById('finalSummary').style.display = 'block';
+    document.getElementById('finalText').textContent = `Player A: ${scoreA} — Player B: ${scoreB} | ${winner}`;
+
+    saveResults({
+      playerA: stratA,
+      playerB: stratB,
+      scoreA,
+      scoreB
+    }).finally(() => {
+      seededRandom = null;
+      isRunning = false;
+      setControlsDisabled(false);
+    });
   }
 }
 
@@ -670,4 +566,25 @@ function initialize() {
   setActionButtons();
 }
 
-initialize();
+function wireInputs() {
+  updateRangeValue('noiseInput', 'noiseValue');
+  updateRangeValue('forgivenessInput', 'forgivenessValue');
+  updateRangeValue('mutationInput', 'mutationValue');
+
+  document.getElementById('noiseInput').addEventListener('input', () => {
+    updateRangeValue('noiseInput', 'noiseValue');
+  });
+  document.getElementById('forgivenessInput').addEventListener('input', () => {
+    updateRangeValue('forgivenessInput', 'forgivenessValue');
+  });
+  document.getElementById('mutationInput').addEventListener('input', () => {
+    updateRangeValue('mutationInput', 'mutationValue');
+  });
+  document.getElementById('roundsInput').addEventListener('input', (event) => {
+    const value = Math.max(1, Math.min(1000, Math.floor(Number.parseFloat(event.target.value) || 1)));
+    document.getElementById('roundTotal').textContent = value;
+  });
+}
+
+populateStrategyDropdown();
+wireInputs();

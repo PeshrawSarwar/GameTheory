@@ -226,13 +226,6 @@ body {
   padding: 6px 8px;
 }
 
-.settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
 .label-nature {
   margin: 10px 0 0;
   font-size: 0.9rem;
