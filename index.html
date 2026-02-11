@@ -180,6 +180,34 @@
       </div>
       <div id="roundDetails" class="round-feed"></div>
     </section>
+
+    <section class="analytics card">
+      <div class="analytics-header">
+        <div>
+          <h2>Run analytics</h2>
+          <p class="subtle">Track cooperation rates and export round-by-round data.</p>
+        </div>
+        <div class="export-row">
+          <button id="exportJsonBtn" class="secondary-btn" type="button" disabled>Export JSON</button>
+          <button id="exportCsvBtn" class="secondary-btn" type="button" disabled>Export CSV</button>
+        </div>
+      </div>
+      <div class="analytics-body">
+        <div class="canvas-card">
+          <canvas id="coopChart" width="720" height="280" role="img" aria-label="Cooperation rate over time"></canvas>
+          <div class="chart-legend">
+            <span><span class="legend-dot legend-a"></span>Player A cooperation</span>
+            <span><span class="legend-dot legend-b"></span>Player B cooperation</span>
+          </div>
+        </div>
+        <div class="summary-card">
+          <h3>Cooperation averages</h3>
+          <p class="summary-line">Player A: <strong id="avgCoopA">0%</strong></p>
+          <p class="summary-line">Player B: <strong id="avgCoopB">0%</strong></p>
+          <p class="helper-text">Rates update as the simulation runs.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="script.js"></script>

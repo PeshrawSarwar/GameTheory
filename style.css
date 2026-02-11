@@ -431,6 +431,12 @@ input[type='range']::-moz-range-thumb {
   font-size: 1rem;
 }
 
+.summary-line {
+  margin: 0;
+  font-weight: 600;
+  color: var(--md-primary-variant);
+}
+
 .round-feed {
   display: grid;
   gap: 14px;
@@ -521,6 +527,63 @@ input[type='range']::-moz-range-thumb {
   box-shadow: var(--md-shadow);
 }
 
+.analytics {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.analytics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.analytics-header h2 {
+  margin: 0 0 6px;
+  font-family: 'Sora', sans-serif;
+  font-size: 1.25rem;
+}
+
+.analytics-body {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.export-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chart-legend {
+  margin-top: 12px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: var(--md-muted);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.legend-a {
+  background: var(--md-primary);
+}
+
+.legend-b {
+  background: var(--md-tertiary);
+}
+
 canvas {
   width: 100%;
   height: auto;
@@ -544,6 +607,10 @@ canvas {
 @media (max-width: 640px) {
   .hero {
     padding: 20px;
+  }
+
+  .analytics-body {
+    grid-template-columns: 1fr;
   }
 
   .settings-row,

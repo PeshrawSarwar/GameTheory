@@ -65,6 +65,50 @@ function computeStats(rows) {
   document.getElementById('avgBScore').textContent = avgB;
   document.getElementById('dominantOutcome').textContent = dominantText;
   document.getElementById('topStrategy').textContent = total ? `Most common strategy: ${topStrategy}` : 'No matches yet.';
+  renderStrategyDistribution(totals.strategyCounts, total);
+}
+
+function renderStrategyDistribution(counts, totalMatches) {
+  const container = document.getElementById('strategyDistribution');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const entries = Object.entries(counts || {});
+  if (!totalMatches || entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'dist-empty';
+    empty.textContent = 'No strategy usage yet. Run and save a simulation first.';
+    container.appendChild(empty);
+    return;
+  }
+
+  entries.sort((a, b) => b[1] - a[1]);
+  const maxCount = entries[0]?.[1] || 1;
+
+  entries.forEach(([name, count]) => {
+    const row = document.createElement('div');
+    row.className = 'dist-row';
+
+    const label = document.createElement('span');
+    label.className = 'dist-label';
+    label.textContent = name;
+
+    const countLabel = document.createElement('span');
+    countLabel.className = 'dist-count';
+    countLabel.textContent = count.toString();
+
+    const bar = document.createElement('div');
+    bar.className = 'dist-bar';
+    const fill = document.createElement('span');
+    const percent = Math.max(6, Math.round((count / maxCount) * 100));
+    fill.style.width = `${percent}%`;
+    bar.appendChild(fill);
+
+    row.appendChild(label);
+    row.appendChild(countLabel);
+    row.appendChild(bar);
+    container.appendChild(row);
+  });
 }
 
 function renderTable(rows) {

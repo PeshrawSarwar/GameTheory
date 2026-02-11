@@ -8,6 +8,12 @@ let isPaused = false;
 let pendingTimeout = null;
 let seededRandom = null;
 let activeState = null;
+let runLog = [];
+let coopSeriesA = [];
+let coopSeriesB = [];
+let coopCountA = 0;
+let coopCountB = 0;
+let runMeta = null;
 
 const SETTINGS_KEY = 'pd-simulator-settings-v2';
 
@@ -243,6 +249,7 @@ function resetGame() {
   scoreA = 0;
   scoreB = 0;
   round = 1;
+  resetRunData();
   document.getElementById('roundDetails').innerHTML = '';
   document.getElementById('scoreA').textContent = scoreA;
   document.getElementById('scoreB').textContent = scoreB;
@@ -267,6 +274,154 @@ function updateRoundTotalDisplay(value) {
   const progress = document.querySelector('.round-progress');
   if (totalLabel) totalLabel.textContent = value;
   if (progress) progress.setAttribute('aria-valuemax', String(value));
+}
+
+function resetRunData() {
+  runLog = [];
+  coopSeriesA = [];
+  coopSeriesB = [];
+  coopCountA = 0;
+  coopCountB = 0;
+  runMeta = null;
+  updateAnalyticsSummary();
+  drawCooperationChart();
+  updateExportButtons();
+}
+
+function updateAnalyticsSummary() {
+  const avgCoopA = document.getElementById('avgCoopA');
+  const avgCoopB = document.getElementById('avgCoopB');
+  if (!avgCoopA || !avgCoopB) return;
+  const lastIndex = coopSeriesA.length - 1;
+  const rateA = lastIndex >= 0 ? coopSeriesA[lastIndex] : 0;
+  const rateB = lastIndex >= 0 ? coopSeriesB[lastIndex] : 0;
+  avgCoopA.textContent = `${Math.round(rateA * 100)}%`;
+  avgCoopB.textContent = `${Math.round(rateB * 100)}%`;
+}
+
+function drawCooperationChart() {
+  const canvas = document.getElementById('coopChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(300, rect.width);
+  const height = Math.max(200, rect.height);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fillRect(0, 0, width, height);
+
+  const padding = 36;
+  const chartWidth = width - padding * 2;
+  const chartHeight = height - padding * 2;
+
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.lineTo(width - padding, height - padding);
+  ctx.stroke();
+
+  if (coopSeriesA.length < 2) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '13px Manrope, sans-serif';
+    ctx.fillText('Run a simulation to see cooperation trends.', padding + 8, height / 2);
+    return;
+  }
+
+  const maxIndex = coopSeriesA.length - 1;
+  const xStep = chartWidth / maxIndex;
+
+  const drawLine = (series, color) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    series.forEach((value, index) => {
+      const x = padding + index * xStep;
+      const y = padding + (1 - value) * chartHeight;
+      if (index === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  };
+
+  drawLine(coopSeriesA, '#2f5bea');
+  drawLine(coopSeriesB, '#f97316');
+}
+
+function updateExportButtons() {
+  const jsonBtn = document.getElementById('exportJsonBtn');
+  const csvBtn = document.getElementById('exportCsvBtn');
+  const enabled = runLog.length > 0;
+  if (jsonBtn) jsonBtn.disabled = !enabled;
+  if (csvBtn) csvBtn.disabled = !enabled;
+}
+
+function buildRunExport() {
+  return {
+    meta: runMeta,
+    rounds: runLog
+  };
+}
+
+function downloadFile(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
+function exportRunData(format) {
+  if (!runLog.length) return;
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  if (format === 'json') {
+    const payload = JSON.stringify(buildRunExport(), null, 2);
+    downloadFile(`pd-run-${timestamp}.json`, payload, 'application/json');
+    return;
+  }
+  if (format === 'csv') {
+    const header = [
+      'round',
+      'strategyA',
+      'strategyB',
+      'choiceA',
+      'choiceB',
+      'payoffA',
+      'payoffB',
+      'scoreA',
+      'scoreB',
+      'coopRateA',
+      'coopRateB'
+    ];
+    const rows = runLog.map((entry) => [
+      entry.round,
+      entry.strategyA,
+      entry.strategyB,
+      entry.choiceA,
+      entry.choiceB,
+      entry.payoffA,
+      entry.payoffB,
+      entry.scoreA,
+      entry.scoreB,
+      (entry.coopRateA * 100).toFixed(1),
+      (entry.coopRateB * 100).toFixed(1)
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    downloadFile(`pd-run-${timestamp}.csv`, csv, 'text/csv');
+  }
 }
 
 function readPayoffMatrix() {
@@ -491,10 +646,34 @@ function advanceRound(state) {
   scoreA += aPayoff;
   scoreB += bPayoff;
 
+  if (choiceA === 'Cooperate') coopCountA += 1;
+  if (choiceB === 'Cooperate') coopCountB += 1;
+  const coopRateA = coopCountA / round;
+  const coopRateB = coopCountB / round;
+  coopSeriesA.push(coopRateA);
+  coopSeriesB.push(coopRateB);
+  runLog.push({
+    round,
+    strategyA: chosenStratA,
+    strategyB: chosenStratB,
+    choiceA,
+    choiceB,
+    payoffA: aPayoff,
+    payoffB: bPayoff,
+    scoreA,
+    scoreB,
+    coopRateA,
+    coopRateB
+  });
+
   document.getElementById('round').textContent = round;
   document.getElementById('scoreA').textContent = scoreA;
   document.getElementById('scoreB').textContent = scoreB;
   updateProgress(round);
+  updateAnalyticsSummary();
+  if (round === 1 || round % 5 === 0 || round === totalRounds) {
+    drawCooperationChart();
+  }
 
   const roundDetails = document.getElementById('roundDetails');
   const entry = document.createElement('div');
@@ -557,6 +736,8 @@ function finishSimulation(state) {
     activeState = null;
     setControlsDisabled(false);
     setActionButtons();
+    updateExportButtons();
+    drawCooperationChart();
   });
 }
 
@@ -597,6 +778,21 @@ function startSimulation() {
   const useMixB = document.getElementById('mixBEnabled').checked;
   const mixA = useMixA ? readMixConfig('mixAList') : null;
   const mixB = useMixB ? readMixConfig('mixBList') : null;
+
+  runMeta = {
+    startedAt: new Date().toISOString(),
+    strategyA: stratA,
+    strategyB: stratB,
+    rounds: totalRounds,
+    speedMs,
+    seed: seedValue,
+    noiseRate,
+    forgivenessRate,
+    mutationRate,
+    payoff: { ...payoffMatrix },
+    mixA: mixA || [],
+    mixB: mixB || []
+  };
 
   activeState = {
     stratA,
@@ -680,6 +876,8 @@ function wireInputs() {
 
   document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
   document.getElementById('resetSettingsBtn').addEventListener('click', resetDefaults);
+  document.getElementById('exportJsonBtn').addEventListener('click', () => exportRunData('json'));
+  document.getElementById('exportCsvBtn').addEventListener('click', () => exportRunData('csv'));
 }
 
 function initialize() {
@@ -688,6 +886,7 @@ function initialize() {
   loadSettings();
   wireInputs();
   setActionButtons();
+  resetRunData();
 }
 
 initialize();
