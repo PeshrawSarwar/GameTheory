@@ -253,11 +253,12 @@ function resetGame() {
 
 function updateProgress(currentRound) {
   const progress = document.querySelector('.round-progress');
-  const fill = document.getElementById('progressFill');
-  if (!progress || !fill) return;
+  const valueLabel = document.getElementById('progressValue');
+  if (!progress) return;
   const clampedRound = Math.max(0, Math.min(currentRound, totalRounds));
   const percent = totalRounds ? (clampedRound / totalRounds) * 100 : 0;
-  fill.style.width = `${percent}%`;
+  progress.style.setProperty('--progress', `${percent}`);
+  if (valueLabel) valueLabel.textContent = `${Math.round(percent)}%`;
   progress.setAttribute('aria-valuenow', String(clampedRound));
 }
 
@@ -498,7 +499,26 @@ function advanceRound(state) {
   const roundDetails = document.getElementById('roundDetails');
   const entry = document.createElement('div');
   entry.className = 'round-entry';
-  entry.innerHTML = `<strong>Round ${round}</strong>: A - ${choiceA} (${chosenStratA}), B - ${choiceB} (${chosenStratB}) ⇒ A: ${aPayoff}, B: ${bPayoff}`;
+  entry.innerHTML = `
+    <div class="round-card">
+      <div class="round-card__header">
+        <span class="round-chip">Round ${round}</span>
+        <span class="round-score">A: ${aPayoff} · B: ${bPayoff}</span>
+      </div>
+      <div class="round-card__body">
+        <div class="round-line">
+          <span class="player-tag">Player A</span>
+          <span class="choice">${choiceA}</span>
+          <span class="meta">(${chosenStratA})</span>
+        </div>
+        <div class="round-line">
+          <span class="player-tag">Player B</span>
+          <span class="choice">${choiceB}</span>
+          <span class="meta">(${chosenStratB})</span>
+        </div>
+      </div>
+    </div>
+  `;
   roundDetails.appendChild(entry);
   roundDetails.scrollTop = roundDetails.scrollHeight;
 
